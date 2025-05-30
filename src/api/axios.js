@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3030/', // ⚠️ Đổi thành domain API thật của bạn
+  baseURL: 'http://103.154.176.108:3016', // ⚠️ Đổi thành domain API thật của bạn
   headers: {
     'Content-Type': 'application/json',
   },
