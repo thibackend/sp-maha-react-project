@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import api from './api/axios';
+import Swal from 'sweetalert2';
 
 export default function App() {
   const [formData, setFormData] = useState({
@@ -135,41 +136,28 @@ export default function App() {
 
       console.log(JSON.stringify(output, null, 2));
       const createService = await api.post('/services/new', output);
-      console.log(createService);
-      if (confirm("Create service successfully!")) {
-
-        if (formData.length > 0) {
-          const serviceDetails = formData.serviceDetails.map(d => {
-            const { id, ...rest } = d;
-            return {
-              ...rest,
-              defaultServicePrice: 0,
-              options: rest.options.map(o => {
-                return {
-                  serviceOptionName: "",
-                  serviceOptionDuration: "",
-                  serviceOptionPrice: "",
-                };
-              })
-            };
-          })
-
-          setFormData(pre => ({
-            ...pre,
-            serviceDetails: serviceDetails
-          }));
-        }
-
-      }
-      // window.location.reload();
+      const wait = await Swal.fire({
+        title: "Create service successfully!",
+        showCancelButton: true,
+      });
+      if (wait) location.reload();
 
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Đã xảy ra lỗi khi submit!');
+      await Swal.fire({
+        icon: 'error', // Use 'error' to show red error icon
+        title: 'Oops...',
+        text: 'Something went wrong!',
+        showCancelButton: true,
+      });
     } finally {
       setIsLoading(false); // ✅ Kết thúc loading
     }
   };
+
+  useEffect(() => {
+    console.log("formdata", formData)
+  }, [formData]);
 
   useEffect(() => {
     // Fetch branch & serviceType data
@@ -198,7 +186,7 @@ export default function App() {
       <form onSubmit={handleSubmit}>
         <div>
           <label>Branch:</label><br />
-          <select name="branchId" value={formData.branchId} onChange={handleChangeRoot} style={{ width: '100%' }}>
+          <select name="branchId" value={formData.branchId} onChange={handleChangeRoot} style={{ width: '100%' }} required>
             <option value="">-- Chọn chi nhánh --</option>
             {branches && branches.map((b) => (
               <option key={b._id} value={b._id}>
@@ -210,7 +198,7 @@ export default function App() {
 
         <div>
           <label>Service Type:</label><br />
-          <select name="serviceTypeId" value={formData.serviceTypeId} onChange={handleChangeRoot} style={{ width: '100%' }}>
+          <select name="serviceTypeId" value={formData.serviceTypeId} onChange={handleChangeRoot} style={{ width: '100%' }} required>
             <option value="">-- Chọn loại dịch vụ --</option>
             {serviceTypes && serviceTypes.map((s) => (
               <option key={s._id} value={s._id}>
@@ -225,10 +213,10 @@ export default function App() {
         {formData.serviceDetails.map((detail, di) => (
           <>
             <div key={detail.id} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 20 }}>
-              <button type="button" onClick={() => removeServiceDetail(detail.id)} style={{ float: 'right' }}>Xóa Detail</button>
+              <button type="button" onClick={() => removeServiceDetail(detail.id)} style={{ float: 'right' }}>Xóa <span style={{ textTransform: "uppercase", color: di === 0 ? 'yellow' : di === 1 ? 'blue' : 'white' }}>{di === 0 ? 'Việt nam' : di === 1 ? 'English' : ''}</span></button>
               <div>
                 <label>Language:</label><br />
-                <select name="language" value={detail.language} onChange={e => handleChangeDetail(detail.id, e)} required>
+                <select name="language" defaultValue={(di === 0 ? 'vi' : di === 1 ? 'en' : '')} value={detail.language} onChange={e => handleChangeDetail(detail.id, e)} required>
                   <option value="">-- Select language --</option>
                   <option value="vi">Vietnamese (vi)</option>
                   <option value="en">English (en)</option>
@@ -261,7 +249,7 @@ export default function App() {
                       placeholder="Duration"
                       type='number'
                       name="serviceOptionDuration"
-                      style={{ width: 60, marginLeft: 5, width: '50%' }}
+                      style={{ marginLeft: 5, width: '50%' }}
                       value={opt.serviceOptionDuration}
                       onChange={e => handleChangeOption(detail.id, opt.id, e)}
                       required
@@ -294,11 +282,11 @@ export default function App() {
               </div>
 
             </div>
-            <div style={{width:'100%', height:"2px", border:"2px dashed blue",marginBottom:20}}></div>
+            <div style={{ width: '100%', height: "2px", border: "2px dashed blue", marginBottom: 20 }}></div>
           </>
         ))}
 
-        <button type="button" onClick={addServiceDetail}>+ Thêm Service Detail</button>
+        <button type="button" onClick={addServiceDetail}>+ Thêm ngôn ngữ</button>
         <hr />
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Đang xử lý...' : 'Submit'}
