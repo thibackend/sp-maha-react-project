@@ -1,22 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import api from './api/axios';
 import Swal from 'sweetalert2';
 
-export default function App() {
-  const [formData, setFormData] = useState({
+// Define types
+interface Branch {
+  _id: string;
+  branchAddress: string;
+}
+
+interface ServiceType {
+  _id: string;
+  serviceTypeName: string;
+}
+
+interface ServiceOption {
+  id: string;
+  serviceOptionName: string;
+  serviceOptionDuration: string;
+  serviceOptionPrice: string;
+}
+
+interface ServiceDetail {
+  id: string;
+  serviceName: string;
+  serviceSubName: string;
+  serviceImage: string;
+  serviceImages: string[];
+  serviceDescription: string;
+  defaultServicePrice: string;
+  servicePrice: string;
+  servicePriceDiscount: string;
+  servicePriceDiscountPercent: string;
+  language: string;
+  options: ServiceOption[];
+}
+
+interface FormData {
+  branchId: string;
+  serviceTypeId: string;
+  serviceDetails: ServiceDetail[];
+}
+
+// Assume api is imported or globally available
+declare const api: any;
+
+export default function ServiceManagement() {
+  const [formData, setFormData] = useState<FormData>({
     branchId: '',
     serviceTypeId: '',
     serviceDetails: [],
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
 
-  const [branches, setBranches] = useState([]);
-  const [serviceTypes, setServiceTypes] = useState([]);
-
-  const handleChangeRoot = (e) => {
+  const handleChangeRoot = (e: ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -44,14 +84,14 @@ export default function App() {
     }));
   };
 
-  const removeServiceDetail = (id) => {
+  const removeServiceDetail = (id: string) => {
     setFormData(prev => ({
       ...prev,
       serviceDetails: prev.serviceDetails.filter(d => d.id !== id)
     }));
   };
 
-  const handleChangeDetail = (id, e) => {
+  const handleChangeDetail = (id: string, e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -61,7 +101,7 @@ export default function App() {
     }));
   };
 
-  const addOption = (detailId) => {
+  const addOption = (detailId: string) => {
     setFormData(prev => ({
       ...prev,
       serviceDetails: prev.serviceDetails.map(d => {
@@ -77,7 +117,7 @@ export default function App() {
     }));
   };
 
-  const removeOption = (detailId, optionId) => {
+  const removeOption = (detailId: string, optionId: string) => {
     setFormData(prev => ({
       ...prev,
       serviceDetails: prev.serviceDetails.map(d => {
@@ -90,7 +130,11 @@ export default function App() {
     }));
   };
 
-  const handleChangeOption = (detailId, optionId, e) => {
+  const handleChangeOption = (
+    detailId: string,
+    optionId: string,
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -106,8 +150,8 @@ export default function App() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    setIsLoading(true); // ✅ Bắt đầu loading
+  const handleSubmit = async (e: FormEvent) => {
+    setIsLoading(true);
     e.preventDefault();
     try {
       const output = {
@@ -115,7 +159,6 @@ export default function App() {
         serviceTypeId: formData.serviceTypeId,
         serviceDetails: formData.serviceDetails.map(d => {
           const { id, ...rest } = d;
-          // chuyển các giá trị số về number
           return {
             ...rest,
             defaultServicePrice: rest.defaultServicePrice ? Number(rest.defaultServicePrice) : undefined,
@@ -145,13 +188,13 @@ export default function App() {
     } catch (error) {
       console.error('Submit error:', error);
       await Swal.fire({
-        icon: 'error', // Use 'error' to show red error icon
+        icon: 'error',
         title: 'Oops...',
         text: 'Something went wrong!',
         showCancelButton: true,
       });
     } finally {
-      setIsLoading(false); // ✅ Kết thúc loading
+      setIsLoading(false);
     }
   };
 
@@ -160,7 +203,6 @@ export default function App() {
   }, [formData]);
 
   useEffect(() => {
-    // Fetch branch & serviceType data
     const fetchOptions = async () => {
       try {
         const [branchRes, serviceTypeRes] = await Promise.all([
@@ -168,7 +210,6 @@ export default function App() {
           api.get('/service-types')
         ]);
 
-        console.log("serviceTypeRes:", serviceTypeRes.data)
         setBranches(branchRes.data.data);
         setServiceTypes(serviceTypeRes.data);
       } catch (err) {
@@ -178,7 +219,6 @@ export default function App() {
 
     fetchOptions();
   }, []);
-
 
   return (
     <div style={{ padding: "20px", width: "600px" }}>
@@ -211,8 +251,8 @@ export default function App() {
         <hr />
         <h3>Thêm các ngôn ngữ</h3>
         {formData.serviceDetails.map((detail, di) => (
-          <>
-            <div key={detail.id} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 20 }}>
+          <React.Fragment key={detail.id}>
+            <div style={{ border: '1px solid #ccc', padding: 10, marginBottom: 20 }}>
               <button type="button" onClick={() => removeServiceDetail(detail.id)} style={{ float: 'right' }}>Xóa <span style={{ textTransform: "uppercase", color: di === 0 ? 'yellow' : di === 1 ? 'blue' : 'white' }}>{di === 0 ? 'Việt nam' : di === 1 ? 'English' : ''}</span></button>
               <div>
                 <label>Language:</label><br />
@@ -283,7 +323,7 @@ export default function App() {
 
             </div>
             <div style={{ width: '100%', height: "2px", border: "2px dashed blue", marginBottom: 20 }}></div>
-          </>
+          </React.Fragment>
         ))}
 
         <button type="button" onClick={addServiceDetail}>+ Thêm ngôn ngữ</button>
