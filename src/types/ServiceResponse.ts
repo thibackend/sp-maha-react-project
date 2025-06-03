@@ -3,6 +3,14 @@ export interface Description {
   content: string;
 }
 
+export interface ServiceOption {
+  _id?: string;
+  serviceDetailId: string;
+  serviceOptionName: string;
+  serviceOptionDuration: number;
+  serviceOptionPrice: number;
+}
+
 export interface Translation {
   _id: string;
   serviceId: string;
@@ -17,6 +25,7 @@ export interface Translation {
   updatedAt: string;
   __v: number;
   serviceDescriptions: Description[];
+  options?: ServiceOption[]
 }
 
 export interface ServiceResponse {

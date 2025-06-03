@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import TranslationForm from './TranslationForm';
 import api from '@api/axios';
-import { Description, ServiceResponse, Translation } from '../types/ServiceResponse';
+import { Description, ServiceOption, ServiceResponse, Translation } from '../types/ServiceResponse';
+import { toast } from 'react-toastify';
 
 const ServiceForm: React.FC = () => {
    const location = useLocation();
@@ -11,6 +12,7 @@ const ServiceForm: React.FC = () => {
    const [serviceIdSelected, setServiceIdSelected] = useState<string>();
    const [serviceSelected, setServiceSelected] = useState<ServiceResponse>({} as ServiceResponse);
    const [formData, setFormData] = useState<Translation[]>([]);
+   const [filteredServices, setFilteredServices] = useState<ServiceResponse[] | null>(null);
 
    const [branchId, setBranchId] = useState<string>('');
    const [branches, setBranches] = useState<any[]>([]);
@@ -108,6 +110,58 @@ const ServiceForm: React.FC = () => {
       );
    };
 
+   // Handle input change for service options
+   const handleOptionChange = (tranIndex: number, optionIndex: number, field: keyof ServiceOption, value: string | number) => {
+      setFormData((prev) =>
+         prev.map((tran, idx) =>
+            idx === tranIndex
+               ? {
+                  ...tran,
+                  options: tran.options?.map((option, optIdx) =>
+                     optIdx === optionIndex ? { ...option, [field]: value } : option
+                  ),
+               }
+               : tran
+         )
+      );
+   };
+
+   // Add service option
+   const addOption = (tranIndex: number) => {
+      setFormData((prev) =>
+         prev.map((tran, idx) =>
+            idx === tranIndex
+               ? {
+                  ...tran,
+                  options: [
+                     ...(tran.options || []),
+                     {
+                        serviceDetailId: '',
+                        serviceOptionName: '',
+                        serviceOptionDuration: 0,
+                        serviceOptionPrice: 0,
+                     },
+                  ],
+               }
+               : tran
+         )
+      );
+   };
+
+   // Remove service option
+   const removeOption = (tranIndex: number, optionIndex: number) => {
+      setFormData((prev) =>
+         prev.map((tran, idx) =>
+            idx === tranIndex
+               ? {
+                  ...tran,
+                  options: tran.options?.filter((_, optIdx) => optIdx !== optionIndex),
+               }
+               : tran
+         )
+      );
+   };
+
 
    // Handle description change
    const handleDescriptionChange = (tranIndex: number, descIndex: number, field: keyof Description, value: string) => {
@@ -163,13 +217,11 @@ const ServiceForm: React.FC = () => {
       e.preventDefault();
       try {
          const { createdAt, _id, __v, language, serviceId, ...rest } = tran;
-         console.log("service Trans ID:", tran._id);
-         console.log("service Trans:", tran);
          await api.patch(`/service-details/${tran._id}`, rest);
-         window.location.reload()
-      } catch (error) {
-         console.error('Error submitting service:', error);
-         alert('Failed to update service.');
+         alert("Update successfully.")
+      } catch (error: any) {
+         console.error('Error submitting service:', error.message);
+         alert("Update failed.")
       }
    };
 
@@ -225,7 +277,7 @@ const ServiceForm: React.FC = () => {
                <option value="">-- select branch --</option>
                {branches && branches.length > 0 && branches.map(branch => (
                   <option key={branch._id} value={branch._id}>
-                     {branch.branchName || branch.name}
+                     {branch.branchAddress || branch.name}
                   </option>
                ))}
             </select>
@@ -235,33 +287,68 @@ const ServiceForm: React.FC = () => {
             langId
             && branchId
             && <div>
-               <select
-                  name="serviceId"
-                  id="serviceId"
-                  onChange={(e) => setServiceIdSelected(e.target.value)}
-                  style={{
-                     padding: '10px',
-                     borderRadius: '6px',
-                     border: '1px solid #ccc',
-                     background: '#fafbfc',
-                     fontSize: '16px',
-                     color: '#222',
-                     outline: 'none',
-                     minWidth: '220px',
-                     boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
-                  }}
-               >
-                  <option value="">-- select service --</option>
-                  {
-                     services
-                     && services?.length > 0
-                     && services.map(svc => (
-                        <option key={svc._id} value={svc._id}>
-                           {`${svc.serviceName}`}
-                        </option>
-                     ))
-                  }
-               </select>
+               <div style={{ position: 'relative', minWidth: '220px' }}>
+                  <input
+                     type="text"
+                     placeholder="Search service..."
+                     value={
+                        serviceIdSelected
+                           ? services.find(s => s._id === serviceIdSelected)?.serviceName || ''
+                           : ''
+                     }
+                     onChange={e => {
+                        const searchValue = e.target.value.toLowerCase();
+                        if (searchValue) {
+                           setFilteredServices(
+                              services.filter(svc =>
+                                 svc.serviceName?.toLowerCase().includes(searchValue)
+                              )
+                           );
+                        } else {
+                           setFilteredServices(null);
+                        }
+                        setServiceIdSelected('');
+                     }}
+                     style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: '1px solid #ccc',
+                        background: '#fafbfc',
+                        fontSize: '16px',
+                        color: '#222',
+                        outline: 'none',
+                        marginBottom: '6px',
+                        boxSizing: 'border-box'
+                     }}
+                  />
+                  <select
+                     name="serviceId"
+                     id="serviceId"
+                     value={serviceIdSelected || ''}
+                     onChange={e => setServiceIdSelected(e.target.value)}
+                     style={{
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: '1px solid #ccc',
+                        background: '#fafbfc',
+                        fontSize: '16px',
+                        color: '#222',
+                        outline: 'none',
+                        minWidth: '220px',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                        width: '100%',
+                     }}
+                  >
+                     <option value="">-- select service --</option>
+                     {(filteredServices ?? services).length > 0 &&
+                        (filteredServices ?? services).map((svc: ServiceResponse) => (
+                           <option key={svc._id} value={svc._id}>
+                              {svc.serviceName}
+                           </option>
+                        ))}
+                  </select>
+               </div>
             </div>
          }
 
@@ -407,7 +494,6 @@ const ServiceForm: React.FC = () => {
                                  </div>
                               ))}
                         </div>
-
                         <button
                            type="button"
                            onClick={() => addDescription(tranIndex)}
@@ -425,6 +511,91 @@ const ServiceForm: React.FC = () => {
                         >
                            Add Description
                         </button>
+
+                        // Add UI for service options
+                        <h3 style={{ margin: '16px 0 0 0', color: 'black' }}>Service Options</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid black', padding: '5px' }}>
+                           {tran.options && tran.options.length > 0 && tran.options.map((option, optionIndex) => (
+                              <div
+                                 key={optionIndex}
+                                 style={{
+                                    display: 'flex',
+                                    border: '1px solid #e0e0e0',
+                                    borderRadius: '6px',
+                                    padding: '14px',
+                                    background: '#fff',
+                                    flexDirection: 'column',
+                                    gap: '10px',
+                                 }}
+                              >
+                                 <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#222' }}>
+                                    Option Name:
+                                    <input
+                                       type="text"
+                                       value={option.serviceOptionName}
+                                       onChange={(e) => handleOptionChange(tranIndex, optionIndex, 'serviceOptionName', e.target.value)}
+                                       style={{ padding: '7px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    />
+                                 </label>
+
+                                 <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#222' }}>
+                                    Duration:
+                                    <input
+                                       type="number"
+                                       value={option.serviceOptionDuration}
+                                       onChange={(e) => handleOptionChange(tranIndex, optionIndex, 'serviceOptionDuration', Number(e.target.value))}
+                                       style={{ padding: '7px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    />
+                                 </label>
+
+                                 <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#222' }}>
+                                    Price:
+                                    <input
+                                       type="number"
+                                       value={option.serviceOptionPrice}
+                                       onChange={(e) => handleOptionChange(tranIndex, optionIndex, 'serviceOptionPrice', Number(e.target.value))}
+                                       style={{ padding: '7px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    />
+                                 </label>
+
+                                 <button
+                                    type="button"
+                                    onClick={() => removeOption(tranIndex, optionIndex)}
+                                    style={{
+                                       alignSelf: 'flex-end',
+                                       background: '#f44336',
+                                       color: '#fff',
+                                       border: 'none',
+                                       borderRadius: '4px',
+                                       padding: '6px 14px',
+                                       cursor: 'pointer',
+                                    }}
+                                 >
+                                    Delete
+                                 </button>
+                              </div>
+                           ))}
+                        </div>
+
+                        <button
+                           type="button"
+                           onClick={() => addOption(tranIndex)}
+                           style={{
+                              background: '#1976d2',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '8px 18px',
+                              cursor: 'pointer',
+                              marginTop: '4px',
+                              width: 'fit-content',
+                              alignSelf: 'flex-start',
+                           }}
+                        >
+                           Add Option
+                        </button>
+
+
 
                         <button
                            type="submit"
