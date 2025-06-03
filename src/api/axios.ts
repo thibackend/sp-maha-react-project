@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/',
+  baseURL: 'https://maha-spa-api.hifiveplus.vn/', // Change this to your deployed server URL
+  // baseURL: 'https://maha-spa-api.hifiveplus.vn/', // Change this to your deployed server URL
   headers: {
     'Content-Type': 'application/json',
   },
